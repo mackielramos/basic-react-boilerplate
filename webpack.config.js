@@ -1,47 +1,56 @@
-var debug = process.env.NODE_ENV !== "production";
-var webpack = require('webpack');
-var path = require('path');
-var random = Math.random().toString(36).substr(2, 5)
-
-module.exports = {
-  context: path.join(__dirname, "src"),
-  devtool: debug ? "inline-sourcemap" : null,
-  entry: "./js/client.js",
-  module: {
-    loaders: [
-      {
-        test: /\.jsx?$/,
-        exclude: /(node_modules|bower_components)/,
-        loader: 'babel-loader',
-        query: {
-          presets: ['react', 'es2015', 'stage-0'],
-          plugins: ['react-html-attrs', 'transform-class-properties', 'transform-decorators-legacy'],
-        }
-      },
-      {
-        test: /\.css$/,
-        loaders: [ 'style-loader', 'css-loader' ]
-      },
-      {
-        test: /\.scss$/,
-        loaders: [ 'style-loader', 'css-loader', 'sass-loader' ]
-      }
-    ]
-  },
-  output: {
-    path: __dirname + "/src/",
-    filename: "client.min.js"
-  },
-  plugins: [
+module.exports = env => {
+  var webpack = require('webpack');
+  var plugins = env.production ? [
     new webpack.DefinePlugin({
-          'process.env.NODE_ENV': '"development"',
-          'process.env.RANDOM': '"'+random+'"',
+      'process.env.NODE_ENV': JSON.stringify('production')
     }),
-    // new webpack.optimize.DedupePlugin(),
-    // new webpack.optimize.OccurenceOrderPlugin(),
-    // new webpack.optimize.UglifyJsPlugin({ mangle: false, sourcemap: false }),
-  ],
-  devServer: {
-    historyApiFallback: true,
-  }
-};
+    new webpack.optimize.UglifyJsPlugin({
+        compress: {
+          warnings: false,
+          screw_ie8: true,
+          conditionals: true,
+          unused: true,
+          comparisons: true,
+          sequences: true,
+          dead_code: true,
+          evaluate: true,
+          if_return: true,
+          join_vars: true
+        },
+        output: {
+          comments: false
+        }
+      }),
+      new webpack.HashedModuleIdsPlugin(),
+      new webpack.optimize.OccurrenceOrderPlugin(),
+    ] : []
+
+  return {
+    devtool: env.production ? 'cheap-module-source-map' : 'inline-sourcemap',
+    entry: [
+      './src/index.js'
+    ],
+    output: {
+      path: __dirname + '/dist',
+      publicPath: '/',
+      filename: 'bundle.js'
+    },
+    module: {
+      rules: [
+        {
+          test: /\.(js|jsx)$/,
+          exclude: /node_modules/,
+          use: ['babel-loader']
+        },
+      ]
+    },
+    resolve: {
+      extensions: ['*', '.js', '.jsx']
+    },
+    devServer: {
+      contentBase: './dist',
+      historyApiFallback: true,
+    },
+    plugins: plugins,
+  };
+}
